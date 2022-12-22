@@ -1,0 +1,40 @@
+name: Docker
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: rsshub
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+
+      - name: Build image
+        run: docker build . --file dockerfile --tag $IMAGE_NAME
+
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u 9cats --password-stdin
+
+      - name: Push image
+        run: |
+          # 拼接镜像 id，这个镜像 id 就是在使用 docker 镜像时 pull 后面的名字。
+          IMAGE_ID=9cats/$IMAGE_NAME
+          # 将所有的大写字母转为小写
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          echo IMAGE_ID=$IMAGE_ID
+          # 设置镜像 id 和版本号
+          docker tag $IMAGE_NAME $IMAGE_ID:latest
+          docker push $IMAGE_ID:latest
